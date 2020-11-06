@@ -1,0 +1,41 @@
+<html><head><style>
+ul,#myUL{list-style-type:none;}#myUL{margin:0;padding:0;}
+.caret{cursor:pointer;-webkit-user-select:none;
+-moz-user-select: none;-ms-user-select:none;user-select:none;}
+.caret::before {content:'\25B6';color:black;
+display:inline-block;margin-right:6px;}
+.caret-down::before{-ms-transform:rotate(90deg);
+-webkit-transform:rotate(90deg);transform:rotate(90deg);}
+.nested{display:none;}.active{display: block;}
+</style></head><body><ul id='myUL'>
+<li><span class='caret'>-1</span><ul class='nested'>
+<li><span class='caret'>-3</span><ul class='nested'>
+<li><span class='caret'>-5</span><ul class='nested'>
+<li>6</li>
+</ul></li>
+<li><span class='caret'>-4</span><ul class='nested'>
+<li>0</li>
+</ul></li>
+</ul></li>
+<li><span class='caret'>-2</span><ul class='nested'>
+<li>2</li>
+<li><span class='caret'>-3</span><ul class='nested'>
+<li><span class='caret'>-5</span><ul class='nested'>
+<li>6</li>
+</ul></li>
+<li><span class='caret'>-4</span><ul class='nested'>
+<li>0</li>
+</ul></li>
+</ul></li>
+<li><span class='caret'>-2</span><ul class='nested'>
+<li>0</li>
+</ul></li>
+</ul></li>
+</ul></li>
+<script>
+var toggler=document.getElementsByClassName('caret');
+var i;for (i=0;i<toggler.length;i++){
+toggler[i].addEventListener('click',function(){
+this.parentElement.querySelector('.nested').classList.toggle('active');
+this.classList.toggle('caret-down');
+});}</script></ul></body></html>
