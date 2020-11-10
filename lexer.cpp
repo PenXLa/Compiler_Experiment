@@ -1,14 +1,14 @@
 #include <bits/stdc++.h>
 using namespace std;
 typedef long long LL;
-string tokens[] = {"#",       "main",   "if",     "then",     "while", "do",
-                   "static",  "int",    "double", "struct",   "break", "else",
-                   "long",    "switch", "case",   " typedef", "char",  "return",
-                   "const",   "float",  "short",  "continue", "for",   "void",
-                   "default", "sizeof", "+",      "-",        "*",     "/",
-                   ":",       ":=",     "<",      "<>",       "<=",    ">",
-                   ">=",      "=",      ";",      "(",        ")",     "{", 
-                   "}",       ","};
+string keywords[] = {"#",       "main",   "if",     "then",     "while", "do",
+                     "static",  "int",    "double", "struct",   "break", "else",
+                     "long",    "switch", "case",   "typedef",  "char",  "return",
+                     "const",   "float",  "short",  "continue", "for",   "void",
+                     "default", "sizeof", "+",      "-",        "*",     "/",
+                     ":",       ":=",     "<",      "<>",       "<=",    ">",
+                     ">=",      "=",      ";",      "(",        ")",     "{", 
+                     "}",       ","};
 
 struct trie {
     static const int charsetn = 128;
@@ -75,35 +75,35 @@ void append_line(const string& line) {
 
 trie tr;
 int main() {
-    for (int i = 0; i < sizeof(tokens) / sizeof(string); ++i)
-        tr.insert(tokens[i], i+3);  //构造关键字的dfa.因为0~2被特殊ID占了，所以ID从3开始
+    for (int i = 0; i < sizeof(keywords) / sizeof(string); ++i)
+        tr.insert(keywords[i], i+3);  //构造关键字的dfa.因为0~2被特殊ID占了，所以ID从3开始
     freopen("code.txt", "r", stdin); //输入文件是code.txt
-    freopen("out.txt", "w", stdout); //输出文件是out.txt
+    freopen("tokens.txt", "w", stdout); //输出文件
     string line;
     while (getline(cin, line)) append_line(line);
+
+    vector<tuple<int, string>> tokens; //词法分析的结果
     for (int i = 0; i < code.length();) {
         if (code[i] == ' ') ++i;
         else if (isalpha(code[i])) {
             int j = i;
             for (; j <= code.length() && isalnum(code[j]); ++j);
             string word = code.substr(i, j - i);
-            printf("<%-6s,", word.c_str());
             int node = tr.find(word);
-            if (node != -1) cout << tr.id[node] << ">\n";
-            else cout << "2>\n";
+            tokens.push_back(make_tuple(node!=-1?tr.id[node]:2, word));
             i = j;
         } else if (isdigit(code[i])) {
             int j = i;
             for (; j <= code.length() && isdigit(code[j]); ++j);
             string word = code.substr(i, j - i);
-            printf("<%-6s,3>\n", word.c_str());
+            tokens.push_back(make_tuple(3, word));
             i = j;
         } else {
             for (int j = min((int)(code.length()) - i, 2); j >= 1; --j) {
                 string word = code.substr(i, j);
                 int node = tr.find(word);
                 if (node != -1) {
-                    printf("<%-6s,%d>\n", word.c_str(), tr.id[node]);
+                    tokens.push_back(make_tuple(tr.id[node], word));
                     i += j;
                     goto exitsym;
                 }
@@ -113,5 +113,10 @@ int main() {
             exitsym:;
         }
     }
+
+    for (const auto& token : tokens) 
+        printf("%-4d%s\n", get<0>(token), get<1>(token).c_str());
+    
+
     return 0;
 }

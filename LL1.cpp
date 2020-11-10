@@ -6,7 +6,9 @@
 #include <iterator>
 #include <cstring>
 #include <stack>
-#include<fstream>
+#include <fstream>
+#include <sstream>
+#include <functional>
 using namespace std;
 typedef long long LL;
 
@@ -32,9 +34,6 @@ struct grammar_tree_node {
         for (grammar_tree_node* nd : ch) delete nd;
     }
 };
-
-
-
 
 enum pre_def_words {EPSLION = 0, ENDSYM = 1}; //结束符和空字。几乎所有的文法都需要这两个字符，所以定义到了这里。
 //产生式的终结符和非终结符均用int表示。
@@ -252,6 +251,19 @@ grammar_tree_node* parse(const grammar& g, const vector<int>& syms) {
     return root;
 }
 
+//读取词法分析的结果
+//仅读取token的id，不读取实际内容
+vector<int> read_tokens(string file) {
+    vector<int> tokens;
+    int id; string word;
+    ifstream fin("tokens.txt");
+    while(fin >> id >> word) {
+        tokens.push_back(id);
+    }
+    fin.close();
+    tokens.push_back(ENDSYM); //追加一个结束符
+    return tokens;
+}
 
 
 //************↓文法定义*******************
@@ -274,31 +286,62 @@ grammar g(E, {
 });
 //************↑文法定义*******************
 
+string getTreeJson(grammar_tree_node* root) {
+    vector<grammar_tree_node*> nodes;
+    vector<pair<grammar_tree_node*, grammar_tree_node*>> edges;
+    function<void(grammar_tree_node*)> dfs;
+    dfs = [&nodes, &edges, &dfs](grammar_tree_node* u){
+        if (u != nullptr) {
+            nodes.push_back(u);
+            for (grammar_tree_node* v : u->ch) {
+                edges.push_back(make_pair(u, v));
+                dfs(v);
+            }
+        }
+    };
+    dfs(root);
+    stringstream ss;
+    ss << "{\"kind\": { \"graph\": true },\"nodes\": [";
+    for (int i=0; i<nodes.size(); ++i) 
+        ss << "{ \"id\": \"" << nodes[i] << "\",\"label\": \"" << nodes[i]->word << "\" }" << ",\n"[i==nodes.size()-1];
+    ss << "],\"edges\": [";
+    for (int i=0; i<edges.size(); ++i) 
+        ss << "{ \"from\": \"" << edges[i].first << "\", \"to\": \"" << edges[i].second << "\"}" << ",\n"[i==edges.size()-1];
+    ss << "]}";
+    return ss.str();
+}
+
+
 int main(){
-    vector<int> syms{I, ADD, I, ENDSYM}; 
-    grammar_tree_node* tree = parse(g, syms); 
+    vector<int> tokens = read_tokens("tokens.txt"); //从文件读入词法分析的结果
+    grammar_tree_node* tree = parse(g, tokens); //语法分析，生成语法树
+
+    string treejson = getTreeJson(tree);
+    cout << treejson << '\n';
+
+    
 
     //输出语法树到HTML
-    ofstream fout("grammar tree.html");
-    fout << "<html><head><style>\n" <<
-        "ul,#myUL{list-style-type:none;}#myUL{margin:0;padding:0;}\n" <<
-        ".caret{cursor:pointer;-webkit-user-select:none;\n" << 
-        "-moz-user-select: none;-ms-user-select:none;user-select:none;}\n" <<
-        ".caret::before {content:'\\25B6';color:black;\n" <<
-        "display:inline-block;margin-right:6px;}\n" <<
-        ".caret-down::before{-ms-transform:rotate(90deg);\n" <<
-        "-webkit-transform:rotate(90deg);transform:rotate(90deg);}\n" <<
-        ".nested{display:none;}.active{display: block;}\n" <<
-        "</style></head><body><ul id='myUL'>\n";
-    tree->output(fout);
-    fout << "<script>\n" <<
-            "var toggler=document.getElementsByClassName('caret');\n" <<
-            "var i;for (i=0;i<toggler.length;i++){\n" <<
-            "toggler[i].addEventListener('click',function(){\n" <<
-            "this.parentElement.querySelector('.nested').classList.toggle('active');\n" <<
-            "this.classList.toggle('caret-down');\n" <<
-            "});}</script></ul></body></html>\n";
-    fout.close();
+    // ofstream fout("grammar tree.html");
+    // fout << "<html><head><style>\n" <<
+    //         "ul,#myUL{list-style-type:none;}#myUL{margin:0;padding:0;}\n" <<
+    //         ".caret{cursor:pointer;-webkit-user-select:none;\n" << 
+    //         "-moz-user-select: none;-ms-user-select:none;user-select:none;}\n" <<
+    //         ".caret::before {content:'\\25B6';color:black;\n" <<
+    //         "display:inline-block;margin-right:6px;}\n" <<
+    //         ".caret-down::before{-ms-transform:rotate(90deg);\n" <<
+    //         "-webkit-transform:rotate(90deg);transform:rotate(90deg);}\n" <<
+    //         ".nested{display:none;}.active{display: block;}\n" <<
+    //         "</style></head><body><ul id='myUL'>\n";
+    // tree->output(fout);
+    // fout << "<script>\n" <<
+    //         "var toggler=document.getElementsByClassName('caret');\n" <<
+    //         "var i;for (i=0;i<toggler.length;i++){\n" <<
+    //         "toggler[i].addEventListener('click',function(){\n" <<
+    //         "this.parentElement.querySelector('.nested').classList.toggle('active');\n" <<
+    //         "this.classList.toggle('caret-down');\n" <<
+    //         "});}</script></ul></body></html>\n";
+    // fout.close();
     return 0;
 }
 
@@ -321,4 +364,111 @@ int main(){
 另外，我也不确定这种递归是否存在环形调用，如果存在，那就是死递归了。
 
 但是我还没对该问题进行建模，只是有一个感性的认识。有时间可以总结建模一下。
+*/
+
+/*
+类C语言文法的设计
+带中括号的是非终结符，用空格分隔各个符号
+[Program] -> [DeclarationList]  //程序由定义列表组成
+[DeclarationList] -> [Declaration] [DeclarationList] | epslion //定义表由多条定义组成
+[Declaration] -> [VarDec] | [FunDec]  //定义由变量定义和函数定义组成
+
+[Const] -> const | epslion // 可选的const关键字
+[Static] -> static | epslion // 可选的static关键字
+[VarDec] -> [GlobalVarDec] | [ScopedVarDec] //变量定义有全局和局部（局部可以带static）
+[GlobalVarDec] -> [Const] [TypeSpecifier] [VarDecList] semicolon //全局变量定义由类型限定符和变量列表以及分号组成
+[ScopedVarDec] -> [Static] [GlobalVarDec] semicolon
+[TypeSpecifier] -> int | float | double | long | bool | char | ID //类型标识符
+[VarDecList] -> [VarDecInit], [VarDecList] | [VarDecInit] //变量声明列表由变量初始化组成
+[VarDecInit] -> [SimpleVarDecInit] | [ArrayDecInit] | [PointerDecInit] //形如 a、a=2、a[2]、a[2]={1,2}、*a、*a=b等
+[SimpleVarDecInit] -> ID [SimpleVarAssignment] //普通变量初始化
+[SimpleVarAssignment] -> = [Expression] | epslion //普通变量赋值
+[ArrayDecInit] -> ID [ArrayDim] [ArrayAssignment] //表达式列表
+[ArrayDim] -> [ [ArrayLen] ][ArrayDim] | [ [ArrayLen] ]  //数组维数，真的有中括号
+[ArrayAssignment] -> = { [ExpressionList] } | epslion  //数组赋值
+[ArrayLen] -> [NUM] | epslion //数组长度可以为常数，也可以为空
+[PointerDecInit] -> [PointerStars] ID [PointerVarAssignment]
+[PointerStars] -> *[PointerStars] | *
+[PointerVarAssignment] -> = [Expression] | epslion //指针变量赋值
+
+[ReturnType] -> void | [TypeSpecifier] //函数返回值可以用void
+[FunDec] -> [ReturnType] ID ([Params]) [Statement] //函数定义
+[Params] -> [ParamList] | epslion
+[ParamList] -> [ParamDec], [ParamList] | [ParamDec] //把参数列表分为Params和ParamList是有必要的。它避免了分隔逗号的多余
+[ParamDec] -> [TypeSpecifier] [VarDecInit]
+
+[Sentence] -> [ExpSt] | [DecSt] | [IfSt] | [ForSt] | [WhileSt] | [DoSt] | [BreakSt] | [ContinueSt] | [ReturnSt]
+[ExpSt] -> [Expression] semicolon | semicolon  //表达式语句
+[DecSt] -> [ScopedVarDec]  //局部声明语句
+[IfSt] -> if ( [Expression] ) [Statement] [ElseSt] //If语句
+[ElseSt] -> else [Statement] | epslion // else语句
+[ForSt] -> for ( [ForInit] [ExpSt] [ExpSt] ) [Statement]
+[ForInit] -> [DecSt] | [ExpSt]
+[WhileSt] -> while ( [Expression] ) [Statement]
+[DoSt] -> do [Statement] while ( [Expression] ) semicolon
+[BreakSt] -> break semicolon
+[ContinueSt] -> continue semicolon
+[ReturnSt] -> return [NullableExp] semicolon
+
+
+[ExpEle] -> ID | NUM | ( [Expression] )  //表达式的基本元素为ID或NUM或带括号的Expression
+//1级运算符，包括数组下标、函数后面的参数表、数据成员、后置++和--，都是左结合
+[Exp1] -> [ArrInxExp] | [FunParamExp] | [MemberExp] | [PointerMemberExp] | [IncExpA] | [DecExpA]
+[ArrInxExp] -> [ExpEle] [ [Expression] ]
+[FunParamExp] -> [ExpEle] ( [ExpressionList] )
+[MemberExp] -> [ExpEle] . ID
+[PointerMemberExp] -> [ExpEle] -> ID
+[IncExpA] -> [ExpEle] ++
+[DecExpA] -> [ExpEle] --
+
+//二级运算符，包括负号、强制类型转换、前置++ -- 取值* 取址& ! ~ sizeof
+[Exp2] -> [NegExp] | [CastExp] | [IncExpB] | [DecExpB] | [PtrStarExp] | [AddrExp] | [NotExp] | [SizeofExp]
+[NegExp] -> - [Exp1]
+[CastExp] -> ( [TypeSpecifier] ) [Exp1]
+[IncExpB] -> [Exp1] ++
+[DecExpB] -> [Exp1] --
+[PtrStarExp] -> * [Exp1]
+[AddrExp] -> & [Exp1]
+
+
+
+[Expression] -> [Exp14] [Expression']
+[Expression'] -> , [Exp14] [Expression'] | epslion
+//14级运算符，包括 =  /=  *=  %=  +=  -=  <<=  >>=  &=  ^=  |=，都是右结合
+//这里的运算符的共同特点是，会给左边赋值，所以运算符左边必须是变量。
+[Exp14] -> [ID] [Exp14Ops] | [Exp13] //最终格式为ID=ID/=ID*=ID=ID%=...=ID=Exp13
+[Exp14Ops] -> [AsmtExp] | [DivAsmtExp] | [MulAsmtExp] | [ModAsmtExp] | [AddAsmtExp] | [SubAsmtExp] | [LSAsmtExp] | [RSAsmtExp] | [AndAsmtExp] | [XorAsmtExp] | [OrAsmtExp]
+[AsmtExp] -> = [Exp14]
+[DivAsmtExp] -> /= [Exp14]
+[MulAsmtExp] -> *= [Exp14]
+[ModAsmtExp] -> %= [Exp14]
+[AddAsmtExp] -> += [Exp14]
+[SubAsmtExp] -> -= [Exp14]
+[LSAsmtExp] -> <<= [Exp14]
+[RSAsmtExp] -> >>= [Exp14]
+[AndAsmtExp] -> &= [Exp14]
+[XorAsmtExp] -> ^= [Exp14]
+[OrAsmtExp] -> |= [Exp14]
+//13级运算符，仅包括条件运算符（待改）
+[Exp13] -> [Exp12] [Exp13']
+[Exp13'] -> ? [Exp13] : [Exp13] [Exp13'] //这个是为了消除左递归
+//12级运算符，仅包括||，左结合
+[Exp12] -> [Exp11] [Exp12']
+[Exp12'] -> || [Exp11] [Exp12'] | epslion //为了消除左递归
+//11级运算符，仅包括&&
+[Exp11] -> [Exp10] [Exp11']
+[Exp11'] -> && [Exp10] [Exp11'] | epslion 
+//10级运算符，仅包括 |
+[Exp10] -> [Exp19] [Exp10']
+[Exp10'] -> | [Exp9] [Exp10'] | epslion //第一个|是or，而不是分割号
+//9级运算符，仅包括 ^
+[Exp9] -> [Exp8] [Exp9']
+[Exp9'] -> ^ [Exp8] [Exp9'] | epslion 
+//8级运算符，仅包括 &
+[Exp8] -> [Exp7] [Exp8']
+[Exp8'] -> & [Exp7] [Exp8'] | epslion 
+//7级运算符，包括!=和==，
+
+[Expression] -> [SimpleExpression] , [Expression] | [SimpleExpression]
+[ExpressionList] -> [Expression]
 */
