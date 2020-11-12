@@ -13,35 +13,22 @@ using namespace std;
 typedef long long LL;
 
 
-//Óï·¨Ê÷½áµã£¬ÓÃÓÚ´¢´æÓï·¨Ê÷£¬±ãÓÚ²é¿´ÍÆµ¼¹ı³Ì
+//è¯­æ³•æ ‘ç»“ç‚¹ï¼Œç”¨äºå‚¨å­˜è¯­æ³•æ ‘ï¼Œä¾¿äºæŸ¥çœ‹æ¨å¯¼è¿‡ç¨‹
 struct grammar_tree_node {
     int word;
     vector<grammar_tree_node*> ch;
-
-
-    //Êä³öhtml¸ñÊ½
-    void output(ostream& out) {
-        if (ch.empty()) {
-            out << "<li>" << word << "</li>\n";
-        } else {
-            out << "<li><span class='caret'>" << word << "</span><ul class='nested'>\n";
-            for (grammar_tree_node* nd : ch) nd->output(out);
-            out << "</ul></li>\n";
-        }
-    }
-
     ~grammar_tree_node() {
         for (grammar_tree_node* nd : ch) delete nd;
     }
 };
 
-enum pre_def_words {EPSLION = 0, ENDSYM = 1}; //½áÊø·ûºÍ¿Õ×Ö¡£¼¸ºõËùÓĞµÄÎÄ·¨¶¼ĞèÒªÕâÁ½¸ö×Ö·û£¬ËùÒÔ¶¨Òåµ½ÁËÕâÀï¡£
-//²úÉúÊ½µÄÖÕ½á·ûºÍ·ÇÖÕ½á·û¾ùÓÃint±íÊ¾¡£
-//¸ºÊıÊÇ·ÇÖÕ½á·û£¬·Ç¸ºÊıÊÇÖÕ½á·û£¬Ò²¾ÍÊÇ´Ê·¨·ÖÎö½×¶ÎµÃµ½µÄsym
-//²úÉúÊ½£¬A->¦Á1|¦Á2...
+enum pre_def_words {EPSLION = 0, ENDSYM = 1}; //ç»“æŸç¬¦å’Œç©ºå­—ã€‚å‡ ä¹æ‰€æœ‰çš„æ–‡æ³•éƒ½éœ€è¦è¿™ä¸¤ä¸ªå­—ç¬¦ï¼Œæ‰€ä»¥å®šä¹‰åˆ°äº†è¿™é‡Œã€‚
+//äº§ç”Ÿå¼çš„ç»ˆç»“ç¬¦å’Œéç»ˆç»“ç¬¦å‡ç”¨intè¡¨ç¤ºã€‚
+//è´Ÿæ•°æ˜¯éç»ˆç»“ç¬¦ï¼Œéè´Ÿæ•°æ˜¯ç»ˆç»“ç¬¦ï¼Œä¹Ÿå°±æ˜¯è¯æ³•åˆ†æé˜¶æ®µå¾—åˆ°çš„sym
+//äº§ç”Ÿå¼ï¼ŒA->Î±1|Î±2...
 struct formular {
     int A;
-    vector<vector<int>> alphas; //Ò»¸övector<int>±íÊ¾ÁËÒ»¸öºòÑ¡Ê½£¬ÔÙÌ×Ò»¸övector¾ÍÊÇºòÑ¡Ê½¼¯ºÏ
+    vector<vector<int>> alphas; //ä¸€ä¸ªvector<int>è¡¨ç¤ºäº†ä¸€ä¸ªå€™é€‰å¼ï¼Œå†å¥—ä¸€ä¸ªvectorå°±æ˜¯å€™é€‰å¼é›†åˆ
 
     bool operator < (const formular& f2) const {
         return A != f2.A ? alphas < f2.alphas : A < f2.A;
@@ -58,27 +45,29 @@ struct formular {
     }
 };
 
+
+
 class grammar {
 public:
     set<formular> g;
-    set<int> nter, ter; //·ÇÖÕ½á·ûºÍÖÕ½á·û
-    int s; //¿ªÊ¼·ûºÅ
-    const vector<int>* tbl[200][200]; //Ô¤²â·ÖÎö±í. tbl[i][j]±íÊ¾·ÇÖÕ½á·ûiÓöµ½ÖÕ½á·ûjÊ±£¬Ó¦×öµÄÍÆµ¼¡£ÓÉÓÚ·ÇÖÕ½á·ûÊÇ¸ºÊı£¬ËùÒÔiÈ¡Ïà·´Êı
+    set<int> nter, ter; //éç»ˆç»“ç¬¦å’Œç»ˆç»“ç¬¦
+    int s; //å¼€å§‹ç¬¦å·
+    const vector<int>* tbl[200][200]; //é¢„æµ‹åˆ†æè¡¨. tbl[i][j]è¡¨ç¤ºéç»ˆç»“ç¬¦ié‡åˆ°ç»ˆç»“ç¬¦jæ—¶ï¼Œåº”åšçš„æ¨å¯¼ã€‚ç”±äºéç»ˆç»“ç¬¦æ˜¯è´Ÿæ•°ï¼Œæ‰€ä»¥iå–ç›¸åæ•°
 
 
     grammar(int s, initializer_list<formular> formulars): s(s) {
         for (const formular& fml : formulars) { 
             g.insert(fml);
-            nter.insert(fml.A); //²úÉúÊ½×ó²¿¼ÓÈë·ÇÖÕ½á·û¼¯
+            nter.insert(fml.A); //äº§ç”Ÿå¼å·¦éƒ¨åŠ å…¥éç»ˆç»“ç¬¦é›†
             for (const auto& alpha : fml.alphas) 
                 for (int word : alpha)
-                    if (word < 0) nter.insert(word); //Ğ¡ÓÚ0£¬ÊÇ·ÇÖÕ½á·û£¬¼ÓÈë·ÇÖÕ½á·û¼¯
-                    else ter.insert(word); //>=0£¬ÊÇÖÕ½á·û£¬¼ÓÈëÖÕ½á·û¼¯
+                    if (word < 0) nter.insert(word); //å°äº0ï¼Œæ˜¯éç»ˆç»“ç¬¦ï¼ŒåŠ å…¥éç»ˆç»“ç¬¦é›†
+                    else ter.insert(word); //>=0ï¼Œæ˜¯ç»ˆç»“ç¬¦ï¼ŒåŠ å…¥ç»ˆç»“ç¬¦é›†
         }
-        calc_first_set(); //Ô¤´¦Àí·ÇÖÕ½á·ûµÄfirst¼¯
-        calc_follow_set();//Ô¤´¦Àí·ÇÖÕ½á·ûµÄfollow¼¯
+        calc_first_set(); //é¢„å¤„ç†éç»ˆç»“ç¬¦çš„firsté›†
+        calc_follow_set();//é¢„å¤„ç†éç»ˆç»“ç¬¦çš„followé›†
         memset(tbl, 0, sizeof tbl);
-        build_table(); //¹¹ÔìÔ¤²â·ÖÎö±í
+        build_table(); //æ„é€ é¢„æµ‹åˆ†æè¡¨
     }
     
 
@@ -122,66 +111,66 @@ public:
         throw "error in follow";
     }
 private:
-    //Íùset1ÖĞ²åÈëx£¬·µ»Ø²åÈëºóset1ÊÇ·ñ¸Ä±ä
+    //å¾€set1ä¸­æ’å…¥xï¼Œè¿”å›æ’å…¥åset1æ˜¯å¦æ”¹å˜
     bool set_ins(set<int>& set1, int x) {
         if (set1.count(x)) return false;
         set1.insert(x);
         return true;
     }
-    //Íùset1ÖĞ²åÈëset2£¬·µ»Ø²åÈëºóset1ÊÇ·ñ¸Ä±ä
+    //å¾€set1ä¸­æ’å…¥set2ï¼Œè¿”å›æ’å…¥åset1æ˜¯å¦æ”¹å˜
     bool set_ins(set<int>& set1, const set<int>& set2) {
         if (includes(set1.cbegin(), set1.cend(), set2.cbegin(), set2.cend())) return false;
         set1.insert(set2.begin(), set2.end());
         return true;
     }
 
-    map<int, set<int>> fst, flw; //·ÇÖÕ½á·ûµÄfirst¼¯ºÍfollow¼¯
+    map<int, set<int>> fst, flw; //éç»ˆç»“ç¬¦çš„firsté›†å’Œfollowé›†
 
-    //¼ÆËã·ÇÖÕ½á·ûµÄfirst¼¯
+    //è®¡ç®—éç»ˆç»“ç¬¦çš„firsté›†
     void calc_first_set() {
         bool changed;
         do {
             changed = false;
-            for (const formular& fml : g) { //¶ÔÓÚÃ¿Ò»¸ö²úÉúÊ½
-                for (const auto& alpha : fml.alphas) { //¶ÔÓÚÃ¿Ò»¸öºòÑ¡Ê½
+            for (const formular& fml : g) { //å¯¹äºæ¯ä¸€ä¸ªäº§ç”Ÿå¼
+                for (const auto& alpha : fml.alphas) { //å¯¹äºæ¯ä¸€ä¸ªå€™é€‰å¼
                     int i = 0;
-                    for (; i<alpha.size(); ++i) { //±éÀúºòÑ¡Ê½µÄÃ¿Ò»¸ö×Ö
-                        //ÏÂÃæµÄËã·¨¶ÔÓÚÓÒ²¿³öÏÖ ×ó²¿µÄA µÄÇé¿öÊÇ¿ÉÒÔ´¦ÀíµÄ
-                        //Èç¹û³öÏÖÁËA£¬¾ÍÊÇ·ÇÖÕ½á·ûµÄÇé¿ö£¬Èç¹ûµ±Ç°first(A)°üº¬EPSLION£¬¾Í¿ÉÒÔ¼ÌĞø´¦ÀíÏÂÈ¥
-                        //Èç¹û²»°üº¬EPSLION£¬¾ÍÍË³ö¡£Ã»ÓĞÎÊÌâ
-                        if (alpha[i] >= 0) { //ÊÇÖÕ½á·û
-                            changed |= set_ins(fst[fml.A], alpha[i]); //²¢Èë
-                            break; //ÖÕ½á·ûfirst¼¯¿Ï¶¨²»°üº¬¿Õ×Ö£¬ÏÂÃæ²»ÓÃ¿¼ÂÇÁË
-                        } else { //ÊÇ·ÇÖÕ½á·û
-                            set<int>& apfst = fst[alpha[i]]; //alpha[i]µÄfirst¼¯
+                    for (; i<alpha.size(); ++i) { //éå†å€™é€‰å¼çš„æ¯ä¸€ä¸ªå­—
+                        //ä¸‹é¢çš„ç®—æ³•å¯¹äºå³éƒ¨å‡ºç° å·¦éƒ¨çš„A çš„æƒ…å†µæ˜¯å¯ä»¥å¤„ç†çš„
+                        //å¦‚æœå‡ºç°äº†Aï¼Œå°±æ˜¯éç»ˆç»“ç¬¦çš„æƒ…å†µï¼Œå¦‚æœå½“å‰first(A)åŒ…å«EPSLIONï¼Œå°±å¯ä»¥ç»§ç»­å¤„ç†ä¸‹å»
+                        //å¦‚æœä¸åŒ…å«EPSLIONï¼Œå°±é€€å‡ºã€‚æ²¡æœ‰é—®é¢˜
+                        if (alpha[i] >= 0) { //æ˜¯ç»ˆç»“ç¬¦
+                            changed |= set_ins(fst[fml.A], alpha[i]); //å¹¶å…¥
+                            break; //ç»ˆç»“ç¬¦firsté›†è‚¯å®šä¸åŒ…å«ç©ºå­—ï¼Œä¸‹é¢ä¸ç”¨è€ƒè™‘äº†
+                        } else { //æ˜¯éç»ˆç»“ç¬¦
+                            set<int>& apfst = fst[alpha[i]]; //alpha[i]çš„firsté›†
                             changed |= set_ins(fst[fml.A], apfst);
-                            if (!apfst.count(EPSLION)) break; //Èç¹ûfirst(alpha[i])²»°üº¬¿Õ×Ö£¬¾Í²»±Ø¼ÌĞøÍùÏÂÕÒÁË
+                            if (!apfst.count(EPSLION)) break; //å¦‚æœfirst(alpha[i])ä¸åŒ…å«ç©ºå­—ï¼Œå°±ä¸å¿…ç»§ç»­å¾€ä¸‹æ‰¾äº†
                         }
                     }
                     if (i == alpha.size()) 
-                        changed |= set_ins(fst[fml.A], EPSLION); //alpha===>EPSLION£¬ÄÇÃ´¾Í°ÑEPSLION¼ÓÈë½á¹û
+                        changed |= set_ins(fst[fml.A], EPSLION); //alpha===>EPSLIONï¼Œé‚£ä¹ˆå°±æŠŠEPSLIONåŠ å…¥ç»“æœ
                 }
             }
         } while (changed);
     }
-    //Ô¤´¦Àí·ÇÖÕ½á·ûµÄfollow¼¯
+    //é¢„å¤„ç†éç»ˆç»“ç¬¦çš„followé›†
     void calc_follow_set() {
         for (int word : nter) calc_follow_set_dfs(word);
     }
     void calc_follow_set_dfs(int word) {
-        if (flw.count(word)) return; //Ëã¹ıÁË£¬return
-        if (word == s) flw[word].insert(ENDSYM); //¸ø¿ªÊ¼·ûºÅ²å½áÊø·û¡£±¾À´Õâ¾äĞ´ÔÚcalc_follow_setÀï±È½ÏºÃ£¬µ«ÊÇÕâÑùcalc_follow_set_dfs¾Í»áÒÔÎªfollow(s)ÊÇÒÑ¾­¼ÆËãºÃµÄ£¬Ö±½ÓÌø¹ı£¬ËùÒÔ¾ÍĞ´ÕâÀïÁË
-        for (const auto& fml : g) { //¶ÔÓÚÃ¿Ò»¸ö²úÉúÊ½
-            for (const auto& alpha : fml.alphas) { //¶ÔÓÚÃ¿¸öºòÑ¡Ê½
-                bool hasEps = true; //´ÓalphaµÄÓÒ±ßµ½i+1´¦ÊÇ·ñ¿ÉÒÔÍÆµ¼³öEpslion£¬¼´A->¦ÁW¦Â£¬¦ÂÊÇ·ñ¿ÉÒÔÍÆµ¼³öepslion
-                for (int i=alpha.size()-1; ~i; --i) { //²éÕÒwordÊÇ·ñÔÚºòÑ¡Ê½Àï
-                    if (alpha[i] == word) { //ÕÒµ½ÁËA->¦ÁW¦Â
-                        set<int> betafst = first(alpha.begin()+i+1, alpha.end()); //first(¦Â)
+        if (flw.count(word)) return; //ç®—è¿‡äº†ï¼Œreturn
+        if (word == s) flw[word].insert(ENDSYM); //ç»™å¼€å§‹ç¬¦å·æ’ç»“æŸç¬¦ã€‚æœ¬æ¥è¿™å¥å†™åœ¨calc_follow_seté‡Œæ¯”è¾ƒå¥½ï¼Œä½†æ˜¯è¿™æ ·calc_follow_set_dfså°±ä¼šä»¥ä¸ºfollow(s)æ˜¯å·²ç»è®¡ç®—å¥½çš„ï¼Œç›´æ¥è·³è¿‡ï¼Œæ‰€ä»¥å°±å†™è¿™é‡Œäº†
+        for (const auto& fml : g) { //å¯¹äºæ¯ä¸€ä¸ªäº§ç”Ÿå¼
+            for (const auto& alpha : fml.alphas) { //å¯¹äºæ¯ä¸ªå€™é€‰å¼
+                bool hasEps = true; //ä»alphaçš„å³è¾¹åˆ°i+1å¤„æ˜¯å¦å¯ä»¥æ¨å¯¼å‡ºEpslionï¼Œå³A->Î±WÎ²ï¼ŒÎ²æ˜¯å¦å¯ä»¥æ¨å¯¼å‡ºepslion
+                for (int i=alpha.size()-1; ~i; --i) { //æŸ¥æ‰¾wordæ˜¯å¦åœ¨å€™é€‰å¼é‡Œ
+                    if (alpha[i] == word) { //æ‰¾åˆ°äº†A->Î±WÎ²
+                        set<int> betafst = first(alpha.begin()+i+1, alpha.end()); //first(Î²)
                         betafst.erase(EPSLION);
-                        set_ins(flw[word], betafst); //follow(word) += first(¦Â) - epslion
+                        set_ins(flw[word], betafst); //follow(word) += first(Î²) - epslion
 
-                        if (hasEps && fml.A != word) { //A->¦ÁW¦Â£¬¦Â¿ÉÒÔÍÆµ¼³öEpslionµÄÇé¿ö
-                            calc_follow_set_dfs(fml.A); //¼ÆËãfollow(A)£¬Èç¹ûËã¹ı»á×Ô¶¯Ìø¹ı
+                        if (hasEps && fml.A != word) { //A->Î±WÎ²ï¼ŒÎ²å¯ä»¥æ¨å¯¼å‡ºEpslionçš„æƒ…å†µ
+                            calc_follow_set_dfs(fml.A); //è®¡ç®—follow(A)ï¼Œå¦‚æœç®—è¿‡ä¼šè‡ªåŠ¨è·³è¿‡
                             set_ins(flw[word], flw[fml.A]); //follow(word) += follow(A)
                         } 
                     }
@@ -191,18 +180,18 @@ private:
         }
     }
 
-    const vector<int> epslionVec{EPSLION}; //Ò»¸ö½ö°üº¬EPSLIONµÄvector£¬¹¹ÔìÔ¤²â·ÖÎö±íÊ±ÓÃ
+    const vector<int> epslionVec{EPSLION}; //ä¸€ä¸ªä»…åŒ…å«EPSLIONçš„vectorï¼Œæ„é€ é¢„æµ‹åˆ†æè¡¨æ—¶ç”¨
     void build_table() {
         for (const formular& fml : g) {
             set<int> aflw = follow(fml.A);
             for (const auto& alpha : fml.alphas) {
-                //´¦Àífirst
+                //å¤„ç†first
                 set<int> apfst = first(alpha);
                 for (int fstword : apfst) {
                     if (tbl[-fml.A][fstword] != nullptr) throw "Conflict when building table";
                     tbl[-fml.A][fstword] = &alpha;
                 }
-                //´¦Àífollow
+                //å¤„ç†follow
                 if (apfst.count(EPSLION)) {
                     for (int flwword : aflw) {
                         if (tbl[-fml.A][flwword] != nullptr) throw "Conflict when building table";
@@ -215,35 +204,49 @@ private:
     
 };
 
-//symÕ»ºÍÓï·¨Ê÷Õ»¿ÉÒÔºÏ²¢Îª1¸ö¡£µ«ÊÇÎªÁË½µµÍÓï·¨·ÖÎöºÍ¿ÉÊÓ»¯Ö®¼äµÄñîºÏ£¬·Ö³ÉÁË2¸öÕ»
-grammar_tree_node* parse(const grammar& g, const vector<int>& syms) {
-    stack<int> stk; //symÕ»
-    stk.push(ENDSYM), stk.push(g.s); //½áÊø·ûºÍ¿ªÊ¼·û
 
-    stack<grammar_tree_node*> nodestk; //Óï·¨Ê÷Õ»£¬ÓÃÓÚ¹¹ÔìÓï·¨Ê÷
-    grammar_tree_node* root = new grammar_tree_node; root->word = g.s; //Óï·¨Ê÷Ê÷¸ù
-    nodestk.push(nullptr), nodestk.push(root); //½áµãÈëÕ»
+struct parse_exception : public exception {
+    int row;
+    string msg;
+    parse_exception(int row, const string& msg): row(row), msg(msg) { }
+    const char* what() const throw() { return ""; }
+};
+//symæ ˆå’Œè¯­æ³•æ ‘æ ˆå¯ä»¥åˆå¹¶ä¸º1ä¸ªã€‚ä½†æ˜¯ä¸ºäº†é™ä½è¯­æ³•åˆ†æå’Œå¯è§†åŒ–ä¹‹é—´çš„è€¦åˆï¼Œåˆ†æˆäº†2ä¸ªæ ˆ
+grammar_tree_node* parse(const grammar& g, const vector<int>& syms) {
+    stack<int> stk; //symæ ˆ
+    stk.push(ENDSYM), stk.push(g.s); //ç»“æŸç¬¦å’Œå¼€å§‹ç¬¦
+
+    stack<grammar_tree_node*> nodestk; //è¯­æ³•æ ‘æ ˆï¼Œç”¨äºæ„é€ è¯­æ³•æ ‘
+    grammar_tree_node* root = new grammar_tree_node; root->word = g.s; //è¯­æ³•æ ‘æ ‘æ ¹
+    nodestk.push(nullptr), nodestk.push(root); //ç»“ç‚¹å…¥æ ˆ
 
     for (int i = 0; i<syms.size();) {
-        int word = stk.top(); stk.pop(); //sym³öÕ»
-        grammar_tree_node* fnode = nodestk.top(); nodestk.pop(); //Óï·¨Ê÷½áµã³öÕ»
-        if (word >= 0) { //ÊÇÖÕ½á·û
-            if (word != syms[i]) puts("ERR1"), throw "ERROR";
+        int word = stk.top(); stk.pop(); //symå‡ºæ ˆ
+        grammar_tree_node* fnode = nodestk.top(); nodestk.pop(); //è¯­æ³•æ ‘ç»“ç‚¹å‡ºæ ˆ
+        if (word >= 0) { //æ˜¯ç»ˆç»“ç¬¦
+            if (word != syms[i]) {
+                stringstream ss;
+                ss << "é‡åˆ°é”™è¯¯ç¬¦å·ã€‚æœŸæœ›æ˜¯[" << word << "]ï¼Œä½†é‡åˆ°äº†[" << syms[i] << "]"; 
+                throw parse_exception(i+1, ss.str());
+            }
             ++i;
-        } else { //ÊÇ·ÇÖÕ½á·û
-            const vector<int>* nxt = g.tbl[-word][syms[i]]; //Ô¤²â·ÖÎö±íÄÚÈİ
-            if (nxt == nullptr) 
-                puts("ERR2"), throw "ERROR";
-            for (auto it = nxt->crbegin(); it != nxt->crend(); ++it) //²úÉúÊ½µ¹ĞòÈëÕ»
+        } else { //æ˜¯éç»ˆç»“ç¬¦
+            const vector<int>* nxt = g.tbl[-word][syms[i]]; //é¢„æµ‹åˆ†æè¡¨å†…å®¹
+            if (nxt == nullptr) {
+                stringstream ss;
+                ss << "é‡åˆ°äº†éæœŸæœ›çš„ç¬¦å·[" << syms[i] << ']'; 
+                throw parse_exception(i+1, ss.str());
+            }
+            for (auto it = nxt->crbegin(); it != nxt->crend(); ++it) //äº§ç”Ÿå¼å€’åºå…¥æ ˆ
                 if (*it != EPSLION) stk.push(*it);
 
-            //Óï·¨Ê÷×Ó½Úµã
+            //è¯­æ³•æ ‘å­èŠ‚ç‚¹
             int inx = nxt->size(); 
             fnode->ch.resize(inx);
             for (auto it = nxt->crbegin(); it != nxt->crend(); ++it) {
                 grammar_tree_node* nd = new grammar_tree_node; 
                 nd->word = *it;
-                fnode->ch[--inx] = nd; //ÔÚµ¹Ğò±éÀúÖĞ²åÈëÕıĞòµÄ×Ó½Úµã
+                fnode->ch[--inx] = nd; //åœ¨å€’åºéå†ä¸­æ’å…¥æ­£åºçš„å­èŠ‚ç‚¹
                 if (*it != EPSLION) nodestk.push(nd);
             }
         }
@@ -251,8 +254,8 @@ grammar_tree_node* parse(const grammar& g, const vector<int>& syms) {
     return root;
 }
 
-//¶ÁÈ¡´Ê·¨·ÖÎöµÄ½á¹û
-//½ö¶ÁÈ¡tokenµÄid£¬²»¶ÁÈ¡Êµ¼ÊÄÚÈİ
+//è¯»å–è¯æ³•åˆ†æçš„ç»“æœ
+//ä»…è¯»å–tokençš„idï¼Œä¸è¯»å–å®é™…å†…å®¹
 vector<int> read_tokens(string file) {
     vector<int> tokens;
     int id; string word;
@@ -261,22 +264,22 @@ vector<int> read_tokens(string file) {
         tokens.push_back(id);
     }
     fin.close();
-    tokens.push_back(ENDSYM); //×·¼ÓÒ»¸ö½áÊø·û
+    tokens.push_back(ENDSYM); //è¿½åŠ ä¸€ä¸ªç»“æŸç¬¦
     return tokens;
 }
 
 
-//************¡ıÎÄ·¨¶¨Òå*******************
-//ÎªÁË±àÂë·½±ã£¬°ÑÊı×ÖsymÅª³Éenum¡£²»ÒªÓÃ0ºÍ1£¬·ÀÖ¹ºÍEPSLIONºÍENDSYMµÄÖµÏàÍ¬¡£
+//************â†“æ–‡æ³•å®šä¹‰*******************
+//ä¸ºäº†ç¼–ç æ–¹ä¾¿ï¼ŒæŠŠæ•°å­—symå¼„æˆenumã€‚ä¸è¦ç”¨0å’Œ1ï¼Œé˜²æ­¢å’ŒEPSLIONå’ŒENDSYMçš„å€¼ç›¸åŒã€‚
 enum words {
-//ÖÕ½á·û
+//ç»ˆç»“ç¬¦
 ADD = 2,    MUL = 3,    LB = 4,
 RB  = 5,    I   = 6,
-//·ÇÖÕ½á·û
+//éç»ˆç»“ç¬¦
 E   = -1,   E1  = -2,   T = -3,
 T1  = -4,   F   = -5,
 };
-//²úÉúÊ½
+//äº§ç”Ÿå¼
 grammar g(E, {
     formular(E,     {{T, E1}}),
     formular(E1,    {{ADD, T, E1}, {EPSLION}}),
@@ -284,7 +287,7 @@ grammar g(E, {
     formular(T1,    {{MUL, F, T1}, {EPSLION}}),
     formular(F,     {{LB, E, RB}, {I}})
 });
-//************¡üÎÄ·¨¶¨Òå*******************
+//************â†‘æ–‡æ³•å®šä¹‰*******************
 
 string getTreeJson(grammar_tree_node* root) {
     vector<grammar_tree_node*> nodes;
@@ -313,95 +316,76 @@ string getTreeJson(grammar_tree_node* root) {
 
 
 int main(){
-    vector<int> tokens = read_tokens("tokens.txt"); //´ÓÎÄ¼ş¶ÁÈë´Ê·¨·ÖÎöµÄ½á¹û
-    grammar_tree_node* tree = parse(g, tokens); //Óï·¨·ÖÎö£¬Éú³ÉÓï·¨Ê÷
-
-    string treejson = getTreeJson(tree);
-    cout << treejson << '\n';
+    vector<int> tokens = read_tokens("tokens.txt"); //ä»æ–‡ä»¶è¯»å…¥è¯æ³•åˆ†æçš„ç»“æœ
+    try {
+        grammar_tree_node* tree = parse(g, tokens); //è¯­æ³•åˆ†æï¼Œç”Ÿæˆè¯­æ³•æ ‘
+        string treejson = getTreeJson(tree);
+        cout << treejson << '\n';
+    } catch (parse_exception e) {
+        cout << "è§£æç¬¬" << e.row << "è¡Œçš„tokenæ—¶é‡åˆ°é”™è¯¯ï¼š" << e.msg << '\n';
+    }
 
     
-
-    //Êä³öÓï·¨Ê÷µ½HTML
-    // ofstream fout("grammar tree.html");
-    // fout << "<html><head><style>\n" <<
-    //         "ul,#myUL{list-style-type:none;}#myUL{margin:0;padding:0;}\n" <<
-    //         ".caret{cursor:pointer;-webkit-user-select:none;\n" << 
-    //         "-moz-user-select: none;-ms-user-select:none;user-select:none;}\n" <<
-    //         ".caret::before {content:'\\25B6';color:black;\n" <<
-    //         "display:inline-block;margin-right:6px;}\n" <<
-    //         ".caret-down::before{-ms-transform:rotate(90deg);\n" <<
-    //         "-webkit-transform:rotate(90deg);transform:rotate(90deg);}\n" <<
-    //         ".nested{display:none;}.active{display: block;}\n" <<
-    //         "</style></head><body><ul id='myUL'>\n";
-    // tree->output(fout);
-    // fout << "<script>\n" <<
-    //         "var toggler=document.getElementsByClassName('caret');\n" <<
-    //         "var i;for (i=0;i<toggler.length;i++){\n" <<
-    //         "toggler[i].addEventListener('click',function(){\n" <<
-    //         "this.parentElement.querySelector('.nested').classList.toggle('active');\n" <<
-    //         "this.classList.toggle('caret-down');\n" <<
-    //         "});}</script></ul></body></html>\n";
-    // fout.close();
     return 0;
 }
 
 
 /*
-Ğ´¼ÆËãfirst¼¯µÄ´úÂëÊ±£¬·¢ÏÖÁËÒ»¸öÎÊÌâ¡£
-Çófirst¼¯Ê±£¬ÓĞfirst(X)ÒÀÀµÓÚfirst(Y)µÄÇé¿ö
-±ÈÈçA->Bc
-ÕâÊ±first(B)¾ÍÒª²¢Èëfirst(A)ÖĞ¡£
-µ«ÊÇ²¢ÈëÊ±£¬first(B)¿ÉÄÜ²¢Ã»ÓĞÍêÈ«Ëã³ö£¬ËùÒÔ¿Î±¾²ÉÓÃÁË²»¶ÏµØÑ­»·À´Çófirst¼¯µÄ·½·¨£¬Ö±µ½½á¹û²»ÔÙ¸Ä±äÎªÖ¹¡£
+å†™è®¡ç®—firsté›†çš„ä»£ç æ—¶ï¼Œå‘ç°äº†ä¸€ä¸ªé—®é¢˜ã€‚
+æ±‚firsté›†æ—¶ï¼Œæœ‰first(X)ä¾èµ–äºfirst(Y)çš„æƒ…å†µ
+æ¯”å¦‚A->Bc
+è¿™æ—¶first(B)å°±è¦å¹¶å…¥first(A)ä¸­ã€‚
+ä½†æ˜¯å¹¶å…¥æ—¶ï¼Œfirst(B)å¯èƒ½å¹¶æ²¡æœ‰å®Œå…¨ç®—å‡ºï¼Œæ‰€ä»¥è¯¾æœ¬é‡‡ç”¨äº†ä¸æ–­åœ°å¾ªç¯æ¥æ±‚firsté›†çš„æ–¹æ³•ï¼Œç›´åˆ°ç»“æœä¸å†æ”¹å˜ä¸ºæ­¢ã€‚
 
-µ«ÊÇÀÏÊ¦¸øµÄwordÎÄµµÖĞ£¬ËÆºõ²ÉÓÃÁËµİ¹é¼ÆËãµÄ·½·¨£¬Òª°Ñfirst(B)²¢Èëfirst(A)Ê±£¬Ö±½Óµİ¹é¼ÆËãfirst(B)£¬
-±£Ö¤first(B)ÍêÈ«¼ÆËãÊ±£¬ÔÙ²¢Èëfirst(A)¡£
+ä½†æ˜¯è€å¸ˆç»™çš„wordæ–‡æ¡£ä¸­ï¼Œä¼¼ä¹é‡‡ç”¨äº†é€’å½’è®¡ç®—çš„æ–¹æ³•ï¼Œè¦æŠŠfirst(B)å¹¶å…¥first(A)æ—¶ï¼Œç›´æ¥é€’å½’è®¡ç®—first(B)ï¼Œ
+ä¿è¯first(B)å®Œå…¨è®¡ç®—æ—¶ï¼Œå†å¹¶å…¥first(A)ã€‚
 
-ÕâÑùËÆºõ²»ĞèÒªÒ»Ö±Ñ­»·ÁË¡£¿ÉÊÇ×ĞÏ¸Ò»Ïë£¬ÕâÑùËÆºõÒ²²»¶Ô¡£
-Ê×ÏÈÎÒ¿¼ÂÇµ½ÁËA->Ab|...µÄÇé¿ö£¬first(A)ÒÀÀµÓÚfirst(A)¡£
-ÕâÊ±ÒªÔõÃ´´¦ÀíÄØ£¿Èç¹ûÔÚ×îÖÕµÄ½á¹ûÖĞ£¬first(A)°üº¬epslion£¬ÄÇÃ´first(A)¾Í¿ÉÒÔ°ÑbÒ²²¢½øÀ´¡£
-·´Ö®Ôò²»¿ÉÒÔ¡£µ«ÊÇÎÒÃÇÏÖÔÚÊÇÎŞ·¨ÖªµÀfirst(A)×îÖÕÊÇ·ñ»á°üº¬epslion¡£
-ËùÒÔÕâÖÖµİ¹éµÄ·½·¨ÊÇ²»¿ÉĞĞµÄ¡£
-ÁíÍâ£¬ÎÒÒ²²»È·¶¨ÕâÖÖµİ¹éÊÇ·ñ´æÔÚ»·ĞÎµ÷ÓÃ£¬Èç¹û´æÔÚ£¬ÄÇ¾ÍÊÇËÀµİ¹éÁË¡£
+è¿™æ ·ä¼¼ä¹ä¸éœ€è¦ä¸€ç›´å¾ªç¯äº†ã€‚å¯æ˜¯ä»”ç»†ä¸€æƒ³ï¼Œè¿™æ ·ä¼¼ä¹ä¹Ÿä¸å¯¹ã€‚
+é¦–å…ˆæˆ‘è€ƒè™‘åˆ°äº†A->Ab|...çš„æƒ…å†µï¼Œfirst(A)ä¾èµ–äºfirst(A)ã€‚
+è¿™æ—¶è¦æ€ä¹ˆå¤„ç†å‘¢ï¼Ÿå¦‚æœåœ¨æœ€ç»ˆçš„ç»“æœä¸­ï¼Œfirst(A)åŒ…å«epslionï¼Œé‚£ä¹ˆfirst(A)å°±å¯ä»¥æŠŠbä¹Ÿå¹¶è¿›æ¥ã€‚
+åä¹‹åˆ™ä¸å¯ä»¥ã€‚ä½†æ˜¯æˆ‘ä»¬ç°åœ¨æ˜¯æ— æ³•çŸ¥é“first(A)æœ€ç»ˆæ˜¯å¦ä¼šåŒ…å«epslionã€‚
+æ‰€ä»¥è¿™ç§é€’å½’çš„æ–¹æ³•æ˜¯ä¸å¯è¡Œçš„ã€‚
+å¦å¤–ï¼Œæˆ‘ä¹Ÿä¸ç¡®å®šè¿™ç§é€’å½’æ˜¯å¦å­˜åœ¨ç¯å½¢è°ƒç”¨ï¼Œå¦‚æœå­˜åœ¨ï¼Œé‚£å°±æ˜¯æ­»é€’å½’äº†ã€‚
 
-µ«ÊÇÎÒ»¹Ã»¶Ô¸ÃÎÊÌâ½øĞĞ½¨Ä££¬Ö»ÊÇÓĞÒ»¸ö¸ĞĞÔµÄÈÏÊ¶¡£ÓĞÊ±¼ä¿ÉÒÔ×Ü½á½¨Ä£Ò»ÏÂ¡£
+ä½†æ˜¯æˆ‘è¿˜æ²¡å¯¹è¯¥é—®é¢˜è¿›è¡Œå»ºæ¨¡ï¼Œåªæ˜¯æœ‰ä¸€ä¸ªæ„Ÿæ€§çš„è®¤è¯†ã€‚æœ‰æ—¶é—´å¯ä»¥æ€»ç»“å»ºæ¨¡ä¸€ä¸‹ã€‚
 */
 
 /*
-ÀàCÓïÑÔÎÄ·¨µÄÉè¼Æ
-´øÖĞÀ¨ºÅµÄÊÇ·ÇÖÕ½á·û£¬ÓÃ¿Õ¸ñ·Ö¸ô¸÷¸ö·ûºÅ
-[Program] -> [DeclarationList]  //³ÌĞòÓÉ¶¨ÒåÁĞ±í×é³É
-[DeclarationList] -> [Declaration] [DeclarationList] | epslion //¶¨Òå±íÓÉ¶àÌõ¶¨Òå×é³É
-[Declaration] -> [VarDec] | [FunDec]  //¶¨ÒåÓÉ±äÁ¿¶¨ÒåºÍº¯Êı¶¨Òå×é³É
+ç±»Cè¯­è¨€æ–‡æ³•çš„è®¾è®¡
+å¸¦ä¸­æ‹¬å·çš„æ˜¯éç»ˆç»“ç¬¦ï¼Œç”¨ç©ºæ ¼åˆ†éš”å„ä¸ªç¬¦å·
+[Program] -> [DeclarationList]  //ç¨‹åºç”±å®šä¹‰åˆ—è¡¨ç»„æˆ
+[DeclarationList] -> [Declaration] [DeclarationList] | epslion //å®šä¹‰è¡¨ç”±å¤šæ¡å®šä¹‰ç»„æˆ
+[Declaration] -> [VarDec] | [FunDec]  //å®šä¹‰ç”±å˜é‡å®šä¹‰å’Œå‡½æ•°å®šä¹‰ç»„æˆ
 
-[Const] -> const | epslion // ¿ÉÑ¡µÄconst¹Ø¼ü×Ö
-[Static] -> static | epslion // ¿ÉÑ¡µÄstatic¹Ø¼ü×Ö
-[VarDec] -> [GlobalVarDec] | [ScopedVarDec] //±äÁ¿¶¨ÒåÓĞÈ«¾ÖºÍ¾Ö²¿£¨¾Ö²¿¿ÉÒÔ´østatic£©
-[GlobalVarDec] -> [Const] [TypeSpecifier] [VarDecList] semicolon //È«¾Ö±äÁ¿¶¨ÒåÓÉÀàĞÍÏŞ¶¨·ûºÍ±äÁ¿ÁĞ±íÒÔ¼°·ÖºÅ×é³É
+[Const] -> const | epslion // å¯é€‰çš„constå…³é”®å­—
+[Static] -> static | epslion // å¯é€‰çš„staticå…³é”®å­—
+[VarDec] -> [GlobalVarDec] | [ScopedVarDec] //å˜é‡å®šä¹‰æœ‰å…¨å±€å’Œå±€éƒ¨ï¼ˆå±€éƒ¨å¯ä»¥å¸¦staticï¼‰
+[GlobalVarDec] -> [Const] [TypeSpecifier] [VarDecList] semicolon //å…¨å±€å˜é‡å®šä¹‰ç”±ç±»å‹é™å®šç¬¦å’Œå˜é‡åˆ—è¡¨ä»¥åŠåˆ†å·ç»„æˆ
 [ScopedVarDec] -> [Static] [GlobalVarDec] semicolon
-[TypeSpecifier] -> int | float | double | long | bool | char | ID //ÀàĞÍ±êÊ¶·û
-[VarDecList] -> [VarDecInit], [VarDecList] | [VarDecInit] //±äÁ¿ÉùÃ÷ÁĞ±íÓÉ±äÁ¿³õÊ¼»¯×é³É
-[VarDecInit] -> [SimpleVarDecInit] | [ArrayDecInit] | [PointerDecInit] //ĞÎÈç a¡¢a=2¡¢a[2]¡¢a[2]={1,2}¡¢*a¡¢*a=bµÈ
-[SimpleVarDecInit] -> ID [SimpleVarAssignment] //ÆÕÍ¨±äÁ¿³õÊ¼»¯
-[SimpleVarAssignment] -> = [Expression] | epslion //ÆÕÍ¨±äÁ¿¸³Öµ
-[ArrayDecInit] -> ID [ArrayDim] [ArrayAssignment] //±í´ïÊ½ÁĞ±í
-[ArrayDim] -> [ [ArrayLen] ][ArrayDim] | [ [ArrayLen] ]  //Êı×éÎ¬Êı£¬ÕæµÄÓĞÖĞÀ¨ºÅ
-[ArrayAssignment] -> = { [ExpressionList] } | epslion  //Êı×é¸³Öµ
-[ArrayLen] -> [NUM] | epslion //Êı×é³¤¶È¿ÉÒÔÎª³£Êı£¬Ò²¿ÉÒÔÎª¿Õ
+[TypeSpecifier] -> int | float | double | long | bool | char | ID //ç±»å‹æ ‡è¯†ç¬¦
+[VarDecList] -> [VarDecInit], [VarDecList] | [VarDecInit] //å˜é‡å£°æ˜åˆ—è¡¨ç”±å˜é‡åˆå§‹åŒ–ç»„æˆ
+[VarDecInit] -> [SimpleVarDecInit] | [ArrayDecInit] | [PointerDecInit] //å½¢å¦‚ aã€a=2ã€a[2]ã€a[2]={1,2}ã€*aã€*a=bç­‰
+[SimpleVarDecInit] -> ID [SimpleVarAssignment] //æ™®é€šå˜é‡åˆå§‹åŒ–
+[SimpleVarAssignment] -> = [Expression] | epslion //æ™®é€šå˜é‡èµ‹å€¼
+[ArrayDecInit] -> ID [ArrayDim] [ArrayAssignment] //è¡¨è¾¾å¼åˆ—è¡¨
+[ArrayDim] -> [ [ArrayLen] ][ArrayDim] | [ [ArrayLen] ]  //æ•°ç»„ç»´æ•°ï¼ŒçœŸçš„æœ‰ä¸­æ‹¬å·
+[ArrayAssignment] -> = { [ExpressionList] } | epslion  //æ•°ç»„èµ‹å€¼
+[ArrayLen] -> [NUM] | epslion //æ•°ç»„é•¿åº¦å¯ä»¥ä¸ºå¸¸æ•°ï¼Œä¹Ÿå¯ä»¥ä¸ºç©º
 [PointerDecInit] -> [PointerStars] ID [PointerVarAssignment]
 [PointerStars] -> *[PointerStars] | *
-[PointerVarAssignment] -> = [Expression] | epslion //Ö¸Õë±äÁ¿¸³Öµ
+[PointerVarAssignment] -> = [Expression] | epslion //æŒ‡é’ˆå˜é‡èµ‹å€¼
 
-[ReturnType] -> void | [TypeSpecifier] //º¯Êı·µ»ØÖµ¿ÉÒÔÓÃvoid
-[FunDec] -> [ReturnType] ID ([Params]) [Statement] //º¯Êı¶¨Òå
+[ReturnType] -> void | [TypeSpecifier] //å‡½æ•°è¿”å›å€¼å¯ä»¥ç”¨void
+[FunDec] -> [ReturnType] ID ([Params]) [Statement] //å‡½æ•°å®šä¹‰
 [Params] -> [ParamList] | epslion
-[ParamList] -> [ParamDec], [ParamList] | [ParamDec] //°Ñ²ÎÊıÁĞ±í·ÖÎªParamsºÍParamListÊÇÓĞ±ØÒªµÄ¡£Ëü±ÜÃâÁË·Ö¸ô¶ººÅµÄ¶àÓà
+[ParamList] -> [ParamDec], [ParamList] | [ParamDec] //æŠŠå‚æ•°åˆ—è¡¨åˆ†ä¸ºParamså’ŒParamListæ˜¯æœ‰å¿…è¦çš„ã€‚å®ƒé¿å…äº†åˆ†éš”é€—å·çš„å¤šä½™
 [ParamDec] -> [TypeSpecifier] [VarDecInit]
 
 [Sentence] -> [ExpSt] | [DecSt] | [IfSt] | [ForSt] | [WhileSt] | [DoSt] | [BreakSt] | [ContinueSt] | [ReturnSt]
-[ExpSt] -> [Expression] semicolon | semicolon  //±í´ïÊ½Óï¾ä
-[DecSt] -> [ScopedVarDec]  //¾Ö²¿ÉùÃ÷Óï¾ä
-[IfSt] -> if ( [Expression] ) [Statement] [ElseSt] //IfÓï¾ä
-[ElseSt] -> else [Statement] | epslion // elseÓï¾ä
+[ExpSt] -> [Expression] semicolon | semicolon  //è¡¨è¾¾å¼è¯­å¥
+[DecSt] -> [ScopedVarDec]  //å±€éƒ¨å£°æ˜è¯­å¥
+[IfSt] -> if ( [Expression] ) [Statement] [ElseSt] //Ifè¯­å¥
+[ElseSt] -> else [Statement] | epslion // elseè¯­å¥
 [ForSt] -> for ( [ForInit] [ExpSt] [ExpSt] ) [Statement]
 [ForInit] -> [DecSt] | [ExpSt]
 [WhileSt] -> while ( [Expression] ) [Statement]
@@ -411,8 +395,8 @@ int main(){
 [ReturnSt] -> return [NullableExp] semicolon
 
 
-[ExpEle] -> ID | NUM | ( [Expression] )  //±í´ïÊ½µÄ»ù±¾ÔªËØÎªID»òNUM»ò´øÀ¨ºÅµÄExpression
-//1¼¶ÔËËã·û£¬°üÀ¨Êı×éÏÂ±ê¡¢º¯ÊıºóÃæµÄ²ÎÊı±í¡¢Êı¾İ³ÉÔ±¡¢ºóÖÃ++ºÍ--£¬¶¼ÊÇ×ó½áºÏ
+[ExpEle] -> ID | NUM | ( [Expression] )  //è¡¨è¾¾å¼çš„åŸºæœ¬å…ƒç´ ä¸ºIDæˆ–NUMæˆ–å¸¦æ‹¬å·çš„Expression
+//1çº§è¿ç®—ç¬¦ï¼ŒåŒ…æ‹¬æ•°ç»„ä¸‹æ ‡ã€å‡½æ•°åé¢çš„å‚æ•°è¡¨ã€æ•°æ®æˆå‘˜ã€åç½®++å’Œ--ï¼Œéƒ½æ˜¯å·¦ç»“åˆ
 [Exp1] -> [ArrInxExp] | [FunParamExp] | [MemberExp] | [PointerMemberExp] | [IncExpA] | [DecExpA]
 [ArrInxExp] -> [ExpEle] [ [Expression] ]
 [FunParamExp] -> [ExpEle] ( [ExpressionList] )
@@ -421,7 +405,7 @@ int main(){
 [IncExpA] -> [ExpEle] ++
 [DecExpA] -> [ExpEle] --
 
-//¶ş¼¶ÔËËã·û£¬°üÀ¨¸ººÅ¡¢Ç¿ÖÆÀàĞÍ×ª»»¡¢Ç°ÖÃ++ -- È¡Öµ* È¡Ö·& ! ~ sizeof
+//äºŒçº§è¿ç®—ç¬¦ï¼ŒåŒ…æ‹¬è´Ÿå·ã€å¼ºåˆ¶ç±»å‹è½¬æ¢ã€å‰ç½®++ -- å–å€¼* å–å€& ! ~ sizeof
 [Exp2] -> [NegExp] | [CastExp] | [IncExpB] | [DecExpB] | [PtrStarExp] | [AddrExp] | [NotExp] | [SizeofExp]
 [NegExp] -> - [Exp1]
 [CastExp] -> ( [TypeSpecifier] ) [Exp1]
@@ -434,9 +418,9 @@ int main(){
 
 [Expression] -> [Exp14] [Expression']
 [Expression'] -> , [Exp14] [Expression'] | epslion
-//14¼¶ÔËËã·û£¬°üÀ¨ =  /=  *=  %=  +=  -=  <<=  >>=  &=  ^=  |=£¬¶¼ÊÇÓÒ½áºÏ
-//ÕâÀïµÄÔËËã·ûµÄ¹²Í¬ÌØµãÊÇ£¬»á¸ø×ó±ß¸³Öµ£¬ËùÒÔÔËËã·û×ó±ß±ØĞëÊÇ±äÁ¿¡£
-[Exp14] -> [ID] [Exp14Ops] | [Exp13] //×îÖÕ¸ñÊ½ÎªID=ID/=ID*=ID=ID%=...=ID=Exp13
+//14çº§è¿ç®—ç¬¦ï¼ŒåŒ…æ‹¬ =  /=  *=  %=  +=  -=  <<=  >>=  &=  ^=  |=ï¼Œéƒ½æ˜¯å³ç»“åˆ
+//è¿™é‡Œçš„è¿ç®—ç¬¦çš„å…±åŒç‰¹ç‚¹æ˜¯ï¼Œä¼šç»™å·¦è¾¹èµ‹å€¼ï¼Œæ‰€ä»¥è¿ç®—ç¬¦å·¦è¾¹å¿…é¡»æ˜¯å˜é‡ã€‚
+[Exp14] -> [ID] [Exp14Ops] | [Exp13] //æœ€ç»ˆæ ¼å¼ä¸ºID=ID/=ID*=ID=ID%=...=ID=Exp13
 [Exp14Ops] -> [AsmtExp] | [DivAsmtExp] | [MulAsmtExp] | [ModAsmtExp] | [AddAsmtExp] | [SubAsmtExp] | [LSAsmtExp] | [RSAsmtExp] | [AndAsmtExp] | [XorAsmtExp] | [OrAsmtExp]
 [AsmtExp] -> = [Exp14]
 [DivAsmtExp] -> /= [Exp14]
@@ -449,25 +433,25 @@ int main(){
 [AndAsmtExp] -> &= [Exp14]
 [XorAsmtExp] -> ^= [Exp14]
 [OrAsmtExp] -> |= [Exp14]
-//13¼¶ÔËËã·û£¬½ö°üÀ¨Ìõ¼şÔËËã·û£¨´ı¸Ä£©
+//13çº§è¿ç®—ç¬¦ï¼Œä»…åŒ…æ‹¬æ¡ä»¶è¿ç®—ç¬¦ï¼ˆå¾…æ”¹ï¼‰
 [Exp13] -> [Exp12] [Exp13']
-[Exp13'] -> ? [Exp13] : [Exp13] [Exp13'] //Õâ¸öÊÇÎªÁËÏû³ı×óµİ¹é
-//12¼¶ÔËËã·û£¬½ö°üÀ¨||£¬×ó½áºÏ
+[Exp13'] -> ? [Exp13] : [Exp13] [Exp13'] //è¿™ä¸ªæ˜¯ä¸ºäº†æ¶ˆé™¤å·¦é€’å½’
+//12çº§è¿ç®—ç¬¦ï¼Œä»…åŒ…æ‹¬||ï¼Œå·¦ç»“åˆ
 [Exp12] -> [Exp11] [Exp12']
-[Exp12'] -> || [Exp11] [Exp12'] | epslion //ÎªÁËÏû³ı×óµİ¹é
-//11¼¶ÔËËã·û£¬½ö°üÀ¨&&
+[Exp12'] -> || [Exp11] [Exp12'] | epslion //ä¸ºäº†æ¶ˆé™¤å·¦é€’å½’
+//11çº§è¿ç®—ç¬¦ï¼Œä»…åŒ…æ‹¬&&
 [Exp11] -> [Exp10] [Exp11']
 [Exp11'] -> && [Exp10] [Exp11'] | epslion 
-//10¼¶ÔËËã·û£¬½ö°üÀ¨ |
+//10çº§è¿ç®—ç¬¦ï¼Œä»…åŒ…æ‹¬ |
 [Exp10] -> [Exp19] [Exp10']
-[Exp10'] -> | [Exp9] [Exp10'] | epslion //µÚÒ»¸ö|ÊÇor£¬¶ø²»ÊÇ·Ö¸îºÅ
-//9¼¶ÔËËã·û£¬½ö°üÀ¨ ^
+[Exp10'] -> | [Exp9] [Exp10'] | epslion //ç¬¬ä¸€ä¸ª|æ˜¯orï¼Œè€Œä¸æ˜¯åˆ†å‰²å·
+//9çº§è¿ç®—ç¬¦ï¼Œä»…åŒ…æ‹¬ ^
 [Exp9] -> [Exp8] [Exp9']
 [Exp9'] -> ^ [Exp8] [Exp9'] | epslion 
-//8¼¶ÔËËã·û£¬½ö°üÀ¨ &
+//8çº§è¿ç®—ç¬¦ï¼Œä»…åŒ…æ‹¬ &
 [Exp8] -> [Exp7] [Exp8']
 [Exp8'] -> & [Exp7] [Exp8'] | epslion 
-//7¼¶ÔËËã·û£¬°üÀ¨!=ºÍ==£¬
+//7çº§è¿ç®—ç¬¦ï¼ŒåŒ…æ‹¬!=å’Œ==ï¼Œ
 
 [Expression] -> [SimpleExpression] , [Expression] | [SimpleExpression]
 [ExpressionList] -> [Expression]
