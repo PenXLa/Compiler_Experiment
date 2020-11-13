@@ -287,6 +287,10 @@ grammar g(E, {
     formular(T1,    {{MUL, F, T1}, {EPSLION}}),
     formular(F,     {{LB, E, RB}, {I}})
 });
+map<int, string> id2name = {
+    {E, "E"}, {E1, "E'"}, {T, "T"}, {T1, "T'"}, {F, "F"}, 
+    {I, "i"}, {ADD, "+"}, {MUL, "*"}, {LB, "("}, {RB, ")"}, {EPSLION, "ε"}
+}; //用于把文法字符的ID转换成便于观察的符号，作用仅仅是便于观察计算结果，对算法本身没有影响。
 //************↑文法定义*******************
 
 string getTreeJson(grammar_tree_node* root) {
@@ -306,7 +310,7 @@ string getTreeJson(grammar_tree_node* root) {
     stringstream ss;
     ss << "{\"kind\": { \"graph\": true },\"nodes\": [";
     for (int i=0; i<nodes.size(); ++i) 
-        ss << "{ \"id\": \"" << nodes[i] << "\",\"label\": \"" << nodes[i]->word << "\" }" << ",\n"[i==nodes.size()-1];
+        ss << "{ \"id\": \"" << nodes[i] << "\",\"label\": \"" << id2name[nodes[i]->word] << "\" }" << ",\n"[i==nodes.size()-1];
     ss << "],\"edges\": [";
     for (int i=0; i<edges.size(); ++i) 
         ss << "{ \"from\": \"" << edges[i].first << "\", \"to\": \"" << edges[i].second << "\"}" << ",\n"[i==edges.size()-1];
