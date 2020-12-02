@@ -68,6 +68,7 @@ public:
         calc_lastvt();//预处理非终结符的follow集
         memset(tbl, 0, sizeof tbl);
         build_table(); //构造预测分析表
+        build_reduceVN();
     }
 //private:
     //往set1中插入x，返回插入后set1是否改变
@@ -120,7 +121,7 @@ public:
     
 
     void build_table() {
-       for (const formular& fml : g) { //遍历产生式
+        for (const formular& fml : g) { //遍历产生式
             for (const auto& alpha : fml.alphas) { //遍历候选式
                 for (int i=1; i<alpha.size()-1; ++i) //查找aQb的情况
                     if (alpha[i]<0 && alpha[i-1]>=0 && alpha[i+1]>=0) 
@@ -137,9 +138,20 @@ public:
                     else throw "Error";//出现了连续的非终结符
                 }
             }
-       }
+        }
     }
-    
+
+    map<vector<int>, int> reduceVN; //算符优先文法的规约表，为了方便parse函数使用，key是stack，倒序的
+    void build_reduceVN() { 
+        for (const formular& fml : g) { //遍历产生式
+            for (const auto& alpha : fml.alphas) { //遍历候选式
+                vector<int> alphavt;
+                for (int i=alpha.size(); i>=0; --i) if (alpha[i]>=0) 
+                    alphavt.push_back(alpha[i]);
+                reduceVN[alphavt] = fml.A;
+            }
+        }
+    }
 };
 
 
@@ -149,16 +161,6 @@ struct parse_exception : public exception {
     parse_exception(int row, const string& msg): row(row), msg(msg) { }
     const char* what() const throw() { return ""; }
 };
-//sym栈和语法树栈可以合并为1个。但是为了降低语法分析和可视化之间的耦合，分成了2个栈
-grammar_tree_node* parse(const grammar& g, const vector<int>& syms) {
-    stack<int> stk, prime; //符号栈和素短语临时栈.由于算符优先文法忽略非终结符的作用，所以符号栈不再加入非终结符
-    stk.push(ENDSYM);
-    for (int i=0; syms[i]!=ENDSYM; ++i) {
-        if (g.tbl[stk.top()][syms[i]] == '') {
-
-        }
-    }
-}
 
 //读取词法分析的结果
 //仅读取token的id，不读取实际内容
@@ -193,45 +195,81 @@ grammar g(E1, {
 });
 map<int, string> id2name = {
     {E, "E"}, {T, "T"}, {F, "F"}, 
-    {I, "i"}, {ADD, "+"}, {MUL, "*"}, {LB, "("}, {RB, ")"}, {EPSLION, "ε"}
+    {I, "i"}, {ADD, "+"}, {MUL, "*"}, {LB, "("}, {RB, ")"}, {EPSLION, "ε"}, {ENDSYM, "#"}
 }; //用于把文法字符的ID转换成便于观察的符号，作用仅仅是便于观察计算结果，对算法本身没有影响。
 //************↑文法定义*******************
 
-string getTreeJson(grammar_tree_node* root) {
-    vector<grammar_tree_node*> nodes;
-    vector<pair<grammar_tree_node*, grammar_tree_node*>> edges;
-    function<void(grammar_tree_node*)> dfs;
-    dfs = [&nodes, &edges, &dfs](grammar_tree_node* u){
-        if (u != nullptr) {
-            nodes.push_back(u);
-            for (grammar_tree_node* v : u->ch) {
-                edges.push_back(make_pair(u, v));
-                dfs(v);
-            }
+
+
+int getTopVT(const vector<int>& stk) {
+    if (stk.back() >= 0) return stk.back();
+    return stk[stk.size()-2];
+}
+void outputStack(const vector<int>& stk, const vector<int>& syms, int i) {
+    for (int j=0; j<stk.size(); ++j) cout << id2name[stk[j]];
+    for (int j=0; j<16-stk.size(); ++j) cout << ' ';
+
+    for (int j=i+1; j<syms.size(); ++j) cout << id2name[syms[j]];
+    for (int j=0; j<16-(syms.size()-i-1); ++j) cout << ' ';
+}
+//sym栈和语法树栈可以合并为1个。但是为了降低语法分析和可视化之间的耦合，分成了2个栈
+void parse(grammar& g, const vector<int>& syms) {
+    printf("%-16s%-16s%-10s\n%-16s%", "Stack", "input", "Action", "#");
+    for (int word : syms) cout << id2name[word]; 
+    for (int j=0; j<16-syms.size(); ++j) cout << ' '; cout << "Prepare\n";
+
+
+    vector<int> stk, prime; //符号栈和素短语临时栈.由于算符优先文法忽略非终结符的作用，所以符号栈可以不再加入非终结符。
+    stk.push_back(ENDSYM);
+    for (int i=0; i<syms.size(); ++i) {
+        while (g.tbl[getTopVT(stk)][syms[i]] == '>') {
+            vector<int> poplist; //出栈的符号，用于输出过程
+            do {
+                if (stk.back() < 0) poplist.push_back(stk.back()), stk.pop_back(); 
+                poplist.push_back(stk.back());
+                prime.push_back(stk.back()); 
+                stk.pop_back();
+            } while(g.tbl[getTopVT(stk)][prime.back()] == '=');
+            if (stk.back() < 0) poplist.push_back(stk.back()), stk.pop_back(); //读入最后一个非终结符
+
+            int reduce = g.reduceVN[prime];
+            stk.push_back(reduce);
+            while(!prime.empty()) prime.pop_back();
+
+            outputStack(stk, syms, i);
+            cout << "Reduce " << id2name[reduce] << "->";
+            for (int j=poplist.size()-1; j>=0; --j) cout << id2name[poplist[j]];
+            cout << '\n'; 
+            
         }
-    };
-    dfs(root);
-    stringstream ss;
-    ss << "{\"kind\": { \"graph\": true },\"nodes\": [";
-    for (int i=0; i<nodes.size(); ++i) 
-        ss << "{ \"id\": \"" << nodes[i] << "\",\"label\": \"" << id2name[nodes[i]->word] << "\" }" << ",\n"[i==nodes.size()-1];
-    ss << "],\"edges\": [";
-    for (int i=0; i<edges.size(); ++i) 
-        ss << "{ \"from\": \"" << edges[i].first << "\", \"to\": \"" << edges[i].second << "\"}" << ",\n"[i==edges.size()-1];
-    ss << "]}";
-    return ss.str();
+        stk.push_back(syms[i]);
+
+        outputStack(stk, syms, i);
+        cout << "Shift\n";
+    }
+}
+
+void prtOPTable(grammar& g) {
+    cout << "  ";
+    for (const auto& r : id2name) if (r.first>0) cout << r.second << ' '; 
+    cout << '\n';
+    for (const auto& r : id2name) if (r.first>0) {
+        cout << r.second << ' ';
+        for (const auto& c : id2name) if (c.first>0)
+            cout << (g.tbl[r.first][c.first]?g.tbl[r.first][c.first]:'.') << ' ';
+        cout << '\n';
+    }
 }
 
 
 int main(){
-    // vector<int> tokens = read_tokens("tokens.txt"); //从文件读入词法分析的结果
-    // try {
-    //     grammar_tree_node* tree = parse(g, tokens); //语法分析，生成语法树
-    //     string treejson = getTreeJson(tree);
-    //     cout << treejson << '\n';
-    // } catch (parse_exception e) {
-    //     cout << "解析第" << e.row << "行的token时遇到错误：" << e.msg << '\n';
-    // }
-
+    vector<int> tokens = read_tokens("tokens.txt"); //从文件读入词法分析的结果
+    prtOPTable(g);
+    try {
+        parse(g, tokens); //语法分析
+    } catch (parse_exception e) {
+        cout << "解析第" << e.row << "行的token时遇到错误：" << e.msg << '\n';
+    }
+    system("pause");
     return 0;
 }
