@@ -154,14 +154,6 @@ public:
     }
 };
 
-
-struct parse_exception : public exception {
-    int row;
-    string msg;
-    parse_exception(int row, const string& msg): row(row), msg(msg) { }
-    const char* what() const throw() { return ""; }
-};
-
 //读取词法分析的结果
 //仅读取token的id，不读取实际内容
 vector<int> read_tokens(string file) {
@@ -265,11 +257,9 @@ void prtOPTable(grammar& g) {
 int main(){
     vector<int> tokens = read_tokens("tokens.txt"); //从文件读入词法分析的结果
     prtOPTable(g);
-    try {
-        parse(g, tokens); //语法分析
-    } catch (parse_exception e) {
-        cout << "解析第" << e.row << "行的token时遇到错误：" << e.msg << '\n';
-    }
+
+    parse(g, tokens); //语法分析
+
     system("pause");
     return 0;
 }
